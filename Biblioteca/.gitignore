@@ -1,0 +1,28 @@
+# Compilação e binários gerados pelo Maven
+target/
+*.class
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.bak
+
+# Configurações do NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Configurações de outras IDEs e editores (caso alguém abra em outro programa)
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
