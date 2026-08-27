@@ -53,8 +53,8 @@ public class Biblioteca {
                 buscar();
             } else if (opcao == 4) {
                 atualizar();
- //           } else if (opcao == 5) {
- //               remover();
+            } else if (opcao == 5) {
+                remover();
             } else if (opcao == 0) {
                 System.out.println("Encerrando o sistema...");
             } else {
@@ -249,6 +249,47 @@ public class Biblioteca {
 
         } catch (SQLException e) {
             System.out.println("Erro ao atualizar: " + e.getMessage());
+        }
+    }
+    
+    // =============================================
+    // 5 - REMOVER
+    // =============================================
+    private static void remover() {
+        // Se nao houver livros (ou nao conectar), encerra a operacao aqui
+        boolean existemLivros = listar();
+        if (!existemLivros) {
+            return;
+        }
+
+        int id = Entrada.leiaInt("Digite o ID do livro que deseja remover: ");
+        boolean confirmar = Entrada.leiaBoolean("Confirma a remocao? (true/false): ");
+
+        if (!confirmar) {
+            System.out.println("Remocao cancelada.");
+            return;
+        }
+
+        Connection conn = conectar();
+        if (conn == null) {
+            return;
+        }
+
+        String sql = "DELETE FROM livros WHERE id = ?";
+
+        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            int linhasAfetadas = stmt.executeUpdate();
+
+            if (linhasAfetadas > 0) {
+                System.out.println("Livro removido com sucesso!");
+            } else {
+                System.out.println("ID nao encontrado no banco.");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao remover: " + e.getMessage());
         }
     }
 }
