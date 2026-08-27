@@ -51,8 +51,8 @@ public class Biblioteca {
                 listar();
             } else if (opcao == 3) {
                 buscar();
- //           } else if (opcao == 4) {
- //               atualizar();
+            } else if (opcao == 4) {
+                atualizar();
  //           } else if (opcao == 5) {
  //               remover();
             } else if (opcao == 0) {
@@ -208,6 +208,47 @@ public class Biblioteca {
 
         } catch (SQLException e) {
             System.out.println("Erro ao buscar: " + e.getMessage());
+        }
+    }
+    
+    // =============================================
+    // 4 - ATUALIZAR
+    // =============================================
+    private static void atualizar() {
+        // Se nao houver livros (ou nao conectar), encerra a operacao aqui
+        boolean existemLivros = listar();
+        if (!existemLivros) {
+            return;
+        }
+
+        int id = Entrada.leiaInt("Digite o ID do livro que deseja atualizar: ");
+
+        String novoAutor = Entrada.leiaString("Novo autor: ");
+        if (!validarTexto(novoAutor, "Autor")) {
+            return;
+        }
+
+        Connection conn = conectar();
+        if (conn == null) {
+            return;
+        }
+
+        String sql = "UPDATE livros SET autor = ? WHERE id = ?";
+
+        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, novoAutor);
+            stmt.setInt(2, id);
+            int linhasAfetadas = stmt.executeUpdate();
+
+            if (linhasAfetadas > 0) {
+                System.out.println("Livro atualizado com sucesso!");
+            } else {
+                System.out.println("ID nao encontrado no banco.");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao atualizar: " + e.getMessage());
         }
     }
 }
