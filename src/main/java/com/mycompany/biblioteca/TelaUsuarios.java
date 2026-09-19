@@ -292,6 +292,11 @@ public class TelaUsuarios extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnFecharActionPerformed
 
+    /**
+    * Recarrega a tabela de usuários com os dados atuais do banco.
+    * Limpa as linhas existentes antes de repopular, para evitar duplicar
+    * registros quando chamado depois de um cadastro/atualização/remoção.
+    */
     private void carregarUsuarios() {
         DefaultTableModel modelo = (DefaultTableModel) tabelaUsuarios.getModel();
         modelo.setRowCount(0);

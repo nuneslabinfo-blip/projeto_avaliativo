@@ -235,7 +235,13 @@ public class TelaEmprestimos extends javax.swing.JFrame {
     private void btnFecharActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFecharActionPerformed
         this.dispose();
     }//GEN-LAST:event_btnFecharActionPerformed
-
+    
+    /**
+    * Recarrega a tabela de empréstimos com os dados atuais do banco.
+    * Limpa as linhas existentes antes de repopular, para evitar duplicar
+    * registros quando chamado depois de um cadastro/devolução.
+    * Faz JOIN com usuarios e livros para exibir nome/título em vez dos IDs.
+    */
     private void carregarEmprestimos() {
         DefaultTableModel modelo = (DefaultTableModel) tabelaEmprestimos.getModel();
         modelo.setRowCount(0);

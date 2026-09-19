@@ -290,7 +290,11 @@ public class TelaLivros extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnFecharActionPerformed
 
-    // ── Método auxiliar: carrega/lista todos os livros na tabela ──
+    /**
+    * Recarrega a tabela de livros com os dados atuais do banco.
+    * Limpa as linhas existentes antes de repopular, para evitar duplicar
+    * registros quando chamado depois de um cadastro/atualização/remoção.
+    */
     private void carregarLivros() {
         DefaultTableModel modelo = (DefaultTableModel) tabelaLivrosResultado.getModel();
         modelo.setRowCount(0); // Limpa a tabela
