@@ -15,14 +15,23 @@ import javax.swing.UIManager;
  *
  * @author Usuario
  */
+
+/**
+ * Abre uma nova conexão com o banco de dados PostgreSQL da biblioteca.
+ * Usado por todas as telas (Livros, Usuários, Empréstimos) antes de
+ * qualquer operação SQL.
+ *
+ * @return a conexão aberta, ou {@code null} se não foi possível conectar
+ *         (nesse caso, quem chamou deve verificar o retorno antes de usar)
+ */
 public class Biblioteca {
 
     // =============================================
     // DADOS DE CONEXAO COM O BANCO
     // =============================================
-    private static final String URL     = "jdbc:postgresql://localhost:5432/biblioteca";
+    private static final String URL = "jdbc:postgresql://localhost:5432/biblioteca";
     private static final String USUARIO = "postgres";
-    private static final String SENHA   = "postgres";
+    private static final String SENHA = "postgres";
 
     // =============================================
     // CONEXAO COM O BANCO
