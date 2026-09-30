@@ -25,15 +25,15 @@
       <Group type="103" groupAlignment="0" attributes="0">
           <Group type="102" alignment="0" attributes="0">
               <EmptySpace min="-2" pref="15" max="-2" attributes="0"/>
-              <Component id="lblUsuarioId" min="-2" pref="83" max="-2" attributes="0"/>
-              <EmptySpace type="unrelated" max="-2" attributes="0"/>
-              <Component id="campoUsuarioId" pref="182" max="32767" attributes="0"/>
-              <EmptySpace type="unrelated" max="-2" attributes="0"/>
-              <Component id="lblLivroId" min="-2" pref="70" max="-2" attributes="0"/>
+              <Component id="lblUsuarioNome" min="-2" max="-2" attributes="0"/>
+              <EmptySpace max="-2" attributes="0"/>
+              <Component id="campoUsuarioId" min="-2" pref="157" max="-2" attributes="0"/>
+              <EmptySpace max="-2" attributes="0"/>
+              <Component id="lblLivroNome" min="-2" pref="94" max="-2" attributes="0"/>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
               <Component id="campoLivroId" min="-2" pref="143" max="-2" attributes="0"/>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
-              <Component id="btnRegistrar" min="-2" max="-2" attributes="0"/>
+              <Component id="btnRegistrar" min="-2" pref="144" max="-2" attributes="0"/>
               <EmptySpace min="-2" pref="15" max="-2" attributes="0"/>
           </Group>
           <Group type="102" alignment="0" attributes="0">
@@ -61,8 +61,8 @@
           <Group type="102" alignment="0" attributes="0">
               <EmptySpace min="-2" pref="10" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="3" attributes="0">
-                  <Component id="lblUsuarioId" alignment="3" min="-2" max="-2" attributes="0"/>
-                  <Component id="lblLivroId" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="lblUsuarioNome" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="lblLivroNome" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="btnRegistrar" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="campoUsuarioId" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="campoLivroId" alignment="3" min="-2" max="-2" attributes="0"/>
@@ -138,14 +138,14 @@
         </Component>
       </SubComponents>
     </Container>
-    <Component class="javax.swing.JLabel" name="lblUsuarioId">
+    <Component class="javax.swing.JLabel" name="lblUsuarioNome">
       <Properties>
-        <Property name="text" type="java.lang.String" value="ID do Usu&#xe1;rio:"/>
+        <Property name="text" type="java.lang.String" value="Nome do Usu&#xe1;rio:"/>
       </Properties>
     </Component>
-    <Component class="javax.swing.JLabel" name="lblLivroId">
+    <Component class="javax.swing.JLabel" name="lblLivroNome">
       <Properties>
-        <Property name="text" type="java.lang.String" value="ID do Livro:"/>
+        <Property name="text" type="java.lang.String" value="Nome do Livro:"/>
       </Properties>
     </Component>
     <Component class="javax.swing.JButton" name="btnRegistrar">

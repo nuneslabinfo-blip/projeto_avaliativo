@@ -12,6 +12,9 @@ import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
 /**
+ * Tela responsável pelo módulo de Usuários do sistema.
+ * Permite cadastrar, buscar, atualizar (nome e e-mail) e remover usuários,
+ * além de listar todos os registros existentes numa tabela.
  *
  * @author Usuario
  */
@@ -97,7 +100,7 @@ public class TelaUsuarios extends javax.swing.JFrame {
             }
         });
 
-        btnAtualizar.setText("Atualizar E-mail");
+        btnAtualizar.setText("Atualizar Nome/E-mail");
         btnAtualizar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnAtualizarActionPerformed(evt);
@@ -171,7 +174,14 @@ public class TelaUsuarios extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+    
+    /**
+     * Executa a busca de usuários por nome ou e-mail.
+     * Se o campo de busca estiver vazio, simplesmente recarrega a lista
+     * completa em vez de fazer uma consulta desnecessária.
+     * Usa ILIKE com "%termo%" para encontrar resultados mesmo com
+     * digitação parcial e ignorando maiúsculas/minúsculas.
+     */
     private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuscarActionPerformed
         String termo = campoBuscar.getText().trim();
         if (termo.isEmpty()) {
@@ -209,7 +219,12 @@ public class TelaUsuarios extends javax.swing.JFrame {
         campoBuscar.setText("");
         carregarUsuarios();
     }//GEN-LAST:event_btnLimparActionPerformed
-
+    
+    /**
+     * Cadastra um novo usuário no banco de dados.
+     * Solicita nome e e-mail via caixas de diálogo; se o usuário
+     * cancelar ou deixar algum campo em branco, a operação é abortada.
+     */
     private void btnCadastrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCadastrarActionPerformed
         String nome = JOptionPane.showInputDialog(this, "Nome do usuário:");
         if (nome == null || nome.isBlank()) return;
@@ -232,7 +247,13 @@ public class TelaUsuarios extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao cadastrar: " + e.getMessage());
         }
     }//GEN-LAST:event_btnCadastrarActionPerformed
-
+    
+    /**
+     * Atualiza o nome e/ou e-mail do usuário selecionado na tabela.
+     * Os campos de diálogo já vêm preenchidos com os valores atuais;
+     * se o usuário deixar algum em branco, o valor original é mantido
+     * (permite atualizar só o nome, só o e-mail, ou os dois de uma vez).
+     */
     private void btnAtualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarActionPerformed
         int linha = tabelaUsuarios.getSelectedRow();
         if (linha == -1) {
@@ -241,17 +262,27 @@ public class TelaUsuarios extends javax.swing.JFrame {
         }
 
         int id = (int) tabelaUsuarios.getValueAt(linha, 0);
-        String novoEmail = JOptionPane.showInputDialog(this, "Novo e-mail:");
-        if (novoEmail == null || novoEmail.isBlank()) return;
+        String nomeAtual = (String) tabelaUsuarios.getValueAt(linha, 1);
+        String emailAtual = (String) tabelaUsuarios.getValueAt(linha, 2);
+        
+        String novoNome = JOptionPane.showInputDialog(this, "Nome (deixe em branco para manter):", nomeAtual);
+        if (novoNome == null) return;
+        
+        String novoEmail = JOptionPane.showInputDialog(this,"E-mail (deixe em branco para manter):", emailAtual);
+        if (novoEmail == null) return;
+        
+        if (novoNome.isBlank()) novoNome = nomeAtual;
+        if (novoEmail.isBlank()) novoEmail = emailAtual;
 
         Connection conn = Biblioteca.conectar();
         if (conn == null) return;
 
-        String sql = "UPDATE usuarios SET email = ? WHERE id = ?";
+        String sql = "UPDATE usuarios SET nome = ?, email = ? WHERE id = ?";
 
         try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, novoEmail);
-            stmt.setInt(2, id);
+            stmt.setString(1, novoNome);
+            stmt.setString(2, novoEmail);
+            stmt.setInt(3, id);
             stmt.executeUpdate();
             JOptionPane.showMessageDialog(this, "Usuário atualizado com sucesso!");
             carregarUsuarios();
@@ -259,7 +290,10 @@ public class TelaUsuarios extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao atualizar: " + e.getMessage());
         }
     }//GEN-LAST:event_btnAtualizarActionPerformed
-
+    
+    /**
+     * Remove o usuário selecionado na tabela, após confirmação do usuário.
+     */
     private void btnRemoverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoverActionPerformed
         int linha = tabelaUsuarios.getSelectedRow();
         if (linha == -1) {
@@ -287,7 +321,10 @@ public class TelaUsuarios extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao remover: " + e.getMessage());
         }
     }//GEN-LAST:event_btnRemoverActionPerformed
-
+    
+    /**
+     * Fecha esta janela sem encerrar o restante da aplicação.
+     */
     private void btnFecharActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFecharActionPerformed
         this.dispose();
     }//GEN-LAST:event_btnFecharActionPerformed

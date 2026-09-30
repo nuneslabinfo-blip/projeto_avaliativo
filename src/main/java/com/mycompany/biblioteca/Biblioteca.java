@@ -6,8 +6,6 @@ package com.mycompany.biblioteca;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 
 /**
  * Classe principal do sistema.

@@ -5,7 +5,6 @@
 package com.mycompany.biblioteca;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -18,69 +17,76 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 /**
- *
+ * Tela de menu principal do sistema.
+ * Exibe os botões de acesso aos módulos (Livros, Usuários, Empréstimos)
+ * e a opção de sair da aplicação.
+ * 
  * @author Usuario
  */
 public class TelaBiblioteca extends JFrame {
-    
-    private static final Color AZUL_ESCURO = new Color(25, 118, 210);
-    private static final Color AZUL_FUNDO  = new Color(240, 244, 248);
-    private static final Color VERDE       = new Color(46, 125, 50);
-    private static final Color LARANJA     = new Color(230, 81, 0);
-    private static final Color VERMELHO    = new Color(198, 40, 40);
 
     public TelaBiblioteca() {
         configurarJanela();
         add(construirPainel());
         setVisible(true);
     }
-
+    
+    /**
+     * Define as configurações básicas da janela principal
+     * (título, tamanho, posição e comportamento ao fechar).
+     */
     private void configurarJanela() {
         setTitle("Sistema de Biblioteca - Menu Principal");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(450, 480);
         setLocationRelativeTo(null);
         setResizable(false);
-        getContentPane().setBackground(AZUL_FUNDO);
     }
-
+    
+    /**
+     * Monta o painel principal da tela, organizando o título no topo
+     * e os botões de navegação no centro.
+     */
     private JPanel construirPainel() {
         JPanel painel = new JPanel(new BorderLayout(0, 20));
-        painel.setBackground(AZUL_FUNDO);
         painel.setBorder(BorderFactory.createEmptyBorder(25, 35, 25, 35));
 
         painel.add(construirTitulo(), BorderLayout.NORTH);
         painel.add(construirBotoes(), BorderLayout.CENTER);
-        painel.add(construirRodape(), BorderLayout.SOUTH);
 
         return painel;
     }
-
+    
+    /**
+     * Cria o painel de título, com o nome do sistema e um subtítulo
+     * explicando a ação esperada do usuário.
+     */
     private JPanel construirTitulo() {
         JPanel topo = new JPanel(new GridLayout(2, 1, 0, 5));
-        topo.setOpaque(false);
 
         JLabel lblTitulo = new JLabel("SISTEMA DE BIBLIOTECA", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitulo.setForeground(new Color(33, 33, 33));
 
         JLabel lblSub = new JLabel("Selecione um módulo para gerenciar", SwingConstants.CENTER);
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblSub.setForeground(new Color(117, 117, 117));
 
         topo.add(lblTitulo);
         topo.add(lblSub);
         return topo;
     }
-
+    
+    /**
+     * Cria o painel com os botões de navegação para cada módulo do
+     * sistema (Livros, Usuários, Empréstimos) e o botão de saída,
+     * já associando as respectivas ações de clique.
+     */
     private JPanel construirBotoes() {
         JPanel centro = new JPanel(new GridLayout(4, 1, 0, 12));
-        centro.setOpaque(false);
 
-        JButton btnLivros = criarBotao("Gerenciar Livros", AZUL_ESCURO);
-        JButton btnUsuarios = criarBotao("Gerenciar Usuários", VERDE);
-        JButton btnEmprestimos = criarBotao("Gerenciar Empréstimos", LARANJA);
-        JButton btnSair = criarBotao("Sair do Sistema", VERMELHO);
+        JButton btnLivros = criarBotao("Gerenciar Livros");
+        JButton btnUsuarios = criarBotao("Gerenciar Usuários");
+        JButton btnEmprestimos = criarBotao("Gerenciar Empréstimos");
+        JButton btnSair = criarBotao("Sair do Sistema");
 
         btnLivros.addActionListener(e -> new TelaLivros().setVisible(true));
         btnUsuarios.addActionListener(e -> new TelaUsuarios().setVisible(true));
@@ -101,22 +107,18 @@ public class TelaBiblioteca extends JFrame {
 
         return centro;
     }
-
-    private JButton criarBotao(String texto, Color corFundo) {
+    
+    /**
+     * Cria e estiliza um botão padrão do menu (fonte, cursor de mão
+     * ao passar por cima, e espaçamento interno), evitando repetir
+     * essa configuração em cada botão individualmente.
+     */
+    private JButton criarBotao(String texto) {
         JButton btn = new JButton(texto);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setBackground(corFundo);
-        btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         return btn;
     }
-
-    private JLabel construirRodape() {
-        JLabel rodape = new JLabel("Desenvolvido em Java Swing + PostgreSQL", SwingConstants.CENTER);
-        rodape.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        rodape.setForeground(new Color(158, 158, 158));
-        return rodape;
-    }    
 }

@@ -97,7 +97,7 @@ public class TelaLivros extends javax.swing.JFrame {
             }
         });
 
-        btnAtualizar.setText("Atualizar Autor");
+        btnAtualizar.setText("Atualizar Título/Autor");
         btnAtualizar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnAtualizarActionPerformed(evt);
@@ -207,7 +207,12 @@ public class TelaLivros extends javax.swing.JFrame {
         campoBuscar.setText("");
         carregarLivros();
     }//GEN-LAST:event_btnLimparActionPerformed
-
+    
+    /**
+     * Cadastra um novo livro no banco de dados.
+     * Solicita título e autor via caixas de diálogo; se o usuário
+     * cancelar ou deixar algum campo em branco, a operação é abortada.
+     */
     private void btnCadastrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCadastrarActionPerformed
         String titulo = JOptionPane.showInputDialog(this, "Título do livro:");
         if (titulo == null || titulo.isBlank()) return;
@@ -230,7 +235,13 @@ public class TelaLivros extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao cadastrar: " + e.getMessage());
         }
     }//GEN-LAST:event_btnCadastrarActionPerformed
-
+    
+    /**
+     * Atualiza o título e/ou autor do livro selecionado na tabela.
+     * Os campos de diálogo já vêm preenchidos com os valores atuais;
+     * se o usuário deixar algum em branco, o valor original é mantido
+     * (permite atualizar só o título, só o autor, ou os dois de uma vez).
+     */
     private void btnAtualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarActionPerformed
         int linha = tabelaLivrosResultado.getSelectedRow();
         if (linha == -1) {
@@ -239,17 +250,27 @@ public class TelaLivros extends javax.swing.JFrame {
         }
 
         int id = (int) tabelaLivrosResultado.getValueAt(linha, 0);
-        String novoAutor = JOptionPane.showInputDialog(this, "Novo autor:");
-        if (novoAutor == null || novoAutor.isBlank()) return;
+        String tituloAtual = (String) tabelaLivrosResultado.getValueAt(linha, 1);
+        String autorAtual = (String) tabelaLivrosResultado.getValueAt(linha, 2);
+        
+        String novoTitulo = JOptionPane.showInputDialog(this,"Título (deixe em branco para manter):", tituloAtual);
+        if (novoTitulo == null) return;
+        
+        String novoAutor = JOptionPane.showInputDialog(this,"Autor (deixe em branco para manter):", autorAtual);
+        if (novoAutor == null) return;
+        
+        if (novoTitulo.isBlank()) novoTitulo = tituloAtual;
+        if (novoAutor.isBlank()) novoAutor = autorAtual;
 
         Connection conn = Biblioteca.conectar();
         if (conn == null) return;
 
-        String sql = "UPDATE livros SET autor = ? WHERE id = ?";
+        String sql = "UPDATE livros SET titulo = ?, autor = ? WHERE id = ?";
 
         try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, novoAutor);
-            stmt.setInt(2, id);
+            stmt.setString(1, novoTitulo);
+            stmt.setString(2, novoAutor);
+            stmt.setInt(3, id);
             stmt.executeUpdate();
             JOptionPane.showMessageDialog(this, "Livro atualizado com sucesso!");
             carregarLivros();
@@ -257,7 +278,10 @@ public class TelaLivros extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao atualizar: " + e.getMessage());
         }
     }//GEN-LAST:event_btnAtualizarActionPerformed
-
+    
+    /**
+     * Remove o livro selecionado na tabela, após confirmação do usuário.
+     */
     private void btnRemoverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoverActionPerformed
         int linha = tabelaLivrosResultado.getSelectedRow();
         if (linha == -1) {
@@ -285,7 +309,10 @@ public class TelaLivros extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao remover: " + e.getMessage());
         }
     }//GEN-LAST:event_btnRemoverActionPerformed
-
+    
+    /**
+     * Fecha esta janela sem encerrar o restante da aplicação.
+     */
     private void btnFecharActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFecharActionPerformed
         this.dispose();
     }//GEN-LAST:event_btnFecharActionPerformed

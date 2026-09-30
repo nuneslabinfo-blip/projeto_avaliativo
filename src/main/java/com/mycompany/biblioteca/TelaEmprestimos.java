@@ -10,8 +10,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
+import java.util.List;
+import java.util.ArrayList;
+import javax.swing.JPopupMenu;
+import javax.swing.JMenuItem;
 
 /**
+ *
+ * Tela responsável pelo módulo de Empréstimos do sistema.
+ * Permite registrar empréstimos e devoluções, com autocompletar de
+ * nomes de usuários e títulos de livros, além de listar todos os
+ * empréstimos existentes numa tabela.
  *
  * @author Usuario
  */
@@ -25,6 +34,9 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         carregarEmprestimos();
+        
+        ativarAutocompletar(campoUsuarioId, "usuarios", "nome");
+        ativarAutocompletar(campoLivroId, "livros", "titulo");
     }
 
     /**
@@ -38,8 +50,8 @@ public class TelaEmprestimos extends javax.swing.JFrame {
 
         painelTabelaEmprestimos = new javax.swing.JScrollPane();
         tabelaEmprestimos = new javax.swing.JTable();
-        lblUsuarioId = new javax.swing.JLabel();
-        lblLivroId = new javax.swing.JLabel();
+        lblUsuarioNome = new javax.swing.JLabel();
+        lblLivroNome = new javax.swing.JLabel();
         btnRegistrar = new javax.swing.JButton();
         campoUsuarioId = new javax.swing.JTextField();
         campoLivroId = new javax.swing.JTextField();
@@ -74,9 +86,9 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         });
         painelTabelaEmprestimos.setViewportView(tabelaEmprestimos);
 
-        lblUsuarioId.setText("ID do Usuário:");
+        lblUsuarioNome.setText("Nome do Usuário:");
 
-        lblLivroId.setText("ID do Livro:");
+        lblLivroNome.setText("Nome do Livro:");
 
         btnRegistrar.setText("Registrar Empréstimo");
         btnRegistrar.addActionListener(new java.awt.event.ActionListener() {
@@ -112,15 +124,15 @@ public class TelaEmprestimos extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(15, 15, 15)
-                .addComponent(lblUsuarioId, javax.swing.GroupLayout.PREFERRED_SIZE, 83, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(campoUsuarioId, javax.swing.GroupLayout.DEFAULT_SIZE, 182, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(lblLivroId, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(lblUsuarioNome)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(campoUsuarioId, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lblLivroNome, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(campoLivroId, javax.swing.GroupLayout.PREFERRED_SIZE, 143, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(btnRegistrar)
+                .addComponent(btnRegistrar, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(15, 15, 15))
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
@@ -142,8 +154,8 @@ public class TelaEmprestimos extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addGap(10, 10, 10)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lblUsuarioId)
-                    .addComponent(lblLivroId)
+                    .addComponent(lblUsuarioNome)
+                    .addComponent(lblLivroNome)
                     .addComponent(btnRegistrar)
                     .addComponent(campoUsuarioId, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(campoLivroId, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -159,45 +171,134 @@ public class TelaEmprestimos extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+    
+    /**
+     * Registra um novo empréstimo a partir do nome do usuário e do
+     * título do livro digitados nos campos.
+     * A consulta usa subselects com ILIKE para localizar os IDs
+     * correspondentes; o INSERT só ocorre se ambos existirem,evitando
+     * registrar um empréstimo com usuário ou livro inválido.
+     */
     private void btnRegistrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegistrarActionPerformed
-        String usuarioTexto = campoUsuarioId.getText().trim();
-        String livroTexto = campoLivroId.getText().trim();
+        String nomeUsuario = campoUsuarioId.getText().trim();
+        String tituloLivro = campoLivroId.getText().trim();
 
-        if (usuarioTexto.isEmpty() || livroTexto.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Informe o ID do usuário e do livro.");
-            return;
-        }
-
-        int usuarioId;
-        int livroId;
-        try {
-            usuarioId = Integer.parseInt(usuarioTexto);
-            livroId = Integer.parseInt(livroTexto);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "IDs devem ser números.");
+        if (nomeUsuario.isEmpty() || tituloLivro.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Informe o Nome do Usuário e o Titulo do Livro.");
             return;
         }
 
         Connection conn = Biblioteca.conectar();
         if (conn == null) return;
 
-        String sql = "INSERT INTO emprestimos (usuario_id, livro_id, data_emprestimo, status) "
-                + "VALUES (?, ?, CURRENT_DATE, 'EM ANDAMENTO')";
+        String sql = "INSERT INTO emprestimos "
+            + "(usuario_id, livro_id, data_emprestimo, status) "
+            + "SELECT "
+            + "(SELECT id FROM usuarios WHERE nome ILIKE ? LIMIT 1), "
+            + "(SELECT id FROM livros WHERE titulo ILIKE ? LIMIT 1), "
+            + "CURRENT_DATE, 'EM ANDAMENTO' "
+            + "WHERE EXISTS (SELECT 1 FROM usuarios WHERE nome ILIKE ?) "
+            + "AND EXISTS (SELECT 1 FROM livros WHERE titulo ILIKE ?)"; 
 
         try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, usuarioId);
-            stmt.setInt(2, livroId);
-            stmt.executeUpdate();
+            String buscaUsuario = "%" + nomeUsuario + "%";
+            String buscaLivro = "%" + tituloLivro + "%";
+            
+            stmt.setString(1, nomeUsuario);
+            stmt.setString(2, tituloLivro);
+            stmt.setString(3, nomeUsuario);
+            stmt.setString(4, tituloLivro);
+            
+            int registrosInseridos = stmt.executeUpdate();
+            
+            if (registrosInseridos == 0) {
+                JOptionPane.showMessageDialog(this, "Usuário ou livro não encontrado.");
+                return;
+            }
+            
             JOptionPane.showMessageDialog(this, "Empréstimo registrado com sucesso!");
+            
             campoUsuarioId.setText("");
             campoLivroId.setText("");
-            carregarEmprestimos();
+            carregarEmprestimos();  
+            
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Erro ao registrar empréstimo: " + e.getMessage());
         }
     }//GEN-LAST:event_btnRegistrarActionPerformed
+    
+    /**
+    * Busca até 8 nomes/títulos que contenham o texto digitado.
+    * Usado para exibir sugestões enquanto o usuário digita.
+    */
+    private List<String> buscarSugestoes(String tabela, String coluna, String termo) {
+        List<String> sugestoes = new ArrayList<>();
+        if (termo.isEmpty()) return sugestoes;
 
+        Connection conn = Biblioteca.conectar();
+        if (conn == null) return sugestoes;
+
+        String sql = "SELECT " + coluna + " FROM " + tabela + " WHERE " + coluna
+                + " ILIKE ? ORDER BY " + coluna + " LIMIT 8";
+
+        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "%" + termo + "%");
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                sugestoes.add(rs.getString(coluna));
+            }
+        } catch (SQLException e) {
+            System.out.println("Erro ao buscar sugestões: " + e.getMessage());
+        }
+        return sugestoes;
+    }
+
+    /**
+    * Liga um campo de texto a um menu suspenso de sugestões, consultando
+    * a tabela/coluna informadas a cada caractere digitado.
+    */
+    private void ativarAutocompletar(javax.swing.JTextField campo, String tabela, String coluna) {
+        JPopupMenu popup = new JPopupMenu();
+
+        campo.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            private void atualizarSugestoes() {
+                String texto = campo.getText().trim();
+                popup.removeAll();
+
+                List<String> sugestoes = buscarSugestoes(tabela, coluna, texto);
+                if (sugestoes.isEmpty()) {
+                    popup.setVisible(false);
+                    return;
+                }
+
+                for (String sugestao : sugestoes) {
+                    JMenuItem item = new JMenuItem(sugestao);
+                    item.addActionListener(e -> {
+                        campo.setText(sugestao);
+                        popup.setVisible(false);
+                    });
+                    popup.add(item);
+                }
+
+                popup.show(campo, 0, campo.getHeight());
+            }
+
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { atualizarSugestoes(); }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { atualizarSugestoes(); }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { }
+        });
+    }
+    
+    /**
+     * Registra a devolução do empréstimo selecionado na tabela,
+     * marcando a data de devolução como a data atual e o status
+     * como "DEVOLVIDO". Impede registrar devolução duplicada.
+     */
     private void btnDevolverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDevolverActionPerformed
         int linha = tabelaEmprestimos.getSelectedRow();
         if (linha == -1) {
@@ -227,11 +328,17 @@ public class TelaEmprestimos extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Erro ao registrar devolução: " + e.getMessage());
         }
     }//GEN-LAST:event_btnDevolverActionPerformed
-
+    
+    /**
+     * Recarrega a tabela de empréstimos com os dados mais recentes do banco.
+     */
     private void btnAtualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarActionPerformed
         carregarEmprestimos();
     }//GEN-LAST:event_btnAtualizarActionPerformed
-
+    
+    /**
+     * Fecha esta janela sem encerrar o restante da aplicação.
+     */
     private void btnFecharActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFecharActionPerformed
         this.dispose();
     }//GEN-LAST:event_btnFecharActionPerformed
@@ -316,8 +423,8 @@ public class TelaEmprestimos extends javax.swing.JFrame {
     private javax.swing.JButton btnRegistrar;
     private javax.swing.JTextField campoLivroId;
     private javax.swing.JTextField campoUsuarioId;
-    private javax.swing.JLabel lblLivroId;
-    private javax.swing.JLabel lblUsuarioId;
+    private javax.swing.JLabel lblLivroNome;
+    private javax.swing.JLabel lblUsuarioNome;
     private javax.swing.JScrollPane painelTabelaEmprestimos;
     private javax.swing.JTable tabelaEmprestimos;
     // End of variables declaration//GEN-END:variables
