@@ -4,9 +4,7 @@
  */
 package com.mycompany.biblioteca;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.List;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
@@ -19,6 +17,7 @@ import javax.swing.table.DefaultTableModel;
  * @author Usuario
  */
 public class TelaUsuarios extends javax.swing.JFrame {
+    private final UsuarioDAO usuarioDAO = new UsuarioDAOJdbc();
 
     /**
      * Creates new form TelaUsuarios
@@ -184,32 +183,8 @@ public class TelaUsuarios extends javax.swing.JFrame {
      */
     private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuscarActionPerformed
         String termo = campoBuscar.getText().trim();
-        if (termo.isEmpty()) {
-            carregarUsuarios();
-            return;
-        }
-
-        DefaultTableModel modelo = (DefaultTableModel) tabelaUsuarios.getModel();
-        modelo.setRowCount(0);
-
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "SELECT * FROM usuarios WHERE nome ILIKE ? OR email ILIKE ? ORDER BY id";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "%" + termo + "%");
-            stmt.setString(2, "%" + termo + "%");
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    modelo.addRow(new Object[]{
-                        rs.getInt("id"),
-                        rs.getString("nome"),
-                        rs.getString("email")
-                    });
-                }
-            }
+        try {
+            preencherTabela(termo.isEmpty() ? usuarioDAO.listarTodos() : usuarioDAO.buscar(termo));
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Erro ao buscar: " + e.getMessage());
         }
@@ -232,15 +207,8 @@ public class TelaUsuarios extends javax.swing.JFrame {
         String email = JOptionPane.showInputDialog(this, "E-mail do usuário:");
         if (email == null || email.isBlank()) return;
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "INSERT INTO usuarios (nome, email) VALUES (?, ?)";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, nome);
-            stmt.setString(2, email);
-            stmt.executeUpdate();
+        try {
+            usuarioDAO.inserir(new Usuario(nome, email));
             JOptionPane.showMessageDialog(this, "Usuário cadastrado com sucesso!");
             carregarUsuarios();
         } catch (SQLException e) {
@@ -264,26 +232,18 @@ public class TelaUsuarios extends javax.swing.JFrame {
         int id = (int) tabelaUsuarios.getValueAt(linha, 0);
         String nomeAtual = (String) tabelaUsuarios.getValueAt(linha, 1);
         String emailAtual = (String) tabelaUsuarios.getValueAt(linha, 2);
-        
+
         String novoNome = JOptionPane.showInputDialog(this, "Nome (deixe em branco para manter):", nomeAtual);
         if (novoNome == null) return;
-        
-        String novoEmail = JOptionPane.showInputDialog(this,"E-mail (deixe em branco para manter):", emailAtual);
+
+        String novoEmail = JOptionPane.showInputDialog(this, "E-mail (deixe em branco para manter):", emailAtual);
         if (novoEmail == null) return;
-        
+
         if (novoNome.isBlank()) novoNome = nomeAtual;
         if (novoEmail.isBlank()) novoEmail = emailAtual;
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "UPDATE usuarios SET nome = ?, email = ? WHERE id = ?";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, novoNome);
-            stmt.setString(2, novoEmail);
-            stmt.setInt(3, id);
-            stmt.executeUpdate();
+        try {
+            usuarioDAO.atualizar(new Usuario(id, novoNome, novoEmail));
             JOptionPane.showMessageDialog(this, "Usuário atualizado com sucesso!");
             carregarUsuarios();
         } catch (SQLException e) {
@@ -302,23 +262,24 @@ public class TelaUsuarios extends javax.swing.JFrame {
         }
 
         int id = (int) tabelaUsuarios.getValueAt(linha, 0);
-        int confirmar = JOptionPane.showConfirmDialog(this, "Confirma a remoção do usuário ID " + id + "?",
-                "Confirmação", JOptionPane.YES_NO_OPTION);
+        String nomeAtual = (String) tabelaUsuarios.getValueAt(linha, 1);
+        String emailAtual = (String) tabelaUsuarios.getValueAt(linha, 2);
 
-        if (confirmar != JOptionPane.YES_OPTION) return;
+        String novoNome = JOptionPane.showInputDialog(this, "Nome (deixe em branco para manter):", nomeAtual);
+        if (novoNome == null) return;
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
+        String novoEmail = JOptionPane.showInputDialog(this, "E-mail (deixe em branco para manter):", emailAtual);
+        if (novoEmail == null) return;
 
-        String sql = "DELETE FROM usuarios WHERE id = ?";
+        if (novoNome.isBlank()) novoNome = nomeAtual;
+        if (novoEmail.isBlank()) novoEmail = emailAtual;
 
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "Usuário removido com sucesso!");
+        try {
+            usuarioDAO.atualizar(new Usuario(id, novoNome, novoEmail));
+            JOptionPane.showMessageDialog(this, "Usuário atualizado com sucesso!");
             carregarUsuarios();
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Erro ao remover: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Erro ao atualizar: " + e.getMessage());
         }
     }//GEN-LAST:event_btnRemoverActionPerformed
     
@@ -335,26 +296,19 @@ public class TelaUsuarios extends javax.swing.JFrame {
     * registros quando chamado depois de um cadastro/atualização/remoção.
     */
     private void carregarUsuarios() {
-        DefaultTableModel modelo = (DefaultTableModel) tabelaUsuarios.getModel();
-        modelo.setRowCount(0);
-
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "SELECT * FROM usuarios ORDER BY id";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                modelo.addRow(new Object[]{
-                    rs.getInt("id"),
-                    rs.getString("nome"),
-                    rs.getString("email")
-                });
-            }
+        try {
+            preencherTabela(usuarioDAO.listarTodos());
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Erro ao listar usuários: " + e.getMessage());
+        }
+    }
+    
+    /** Limpa a tabela e a preenche com a lista recebida. */
+    private void preencherTabela(List<Usuario> usuarios) {
+        DefaultTableModel modelo = (DefaultTableModel) tabelaUsuarios.getModel();
+        modelo.setRowCount(0);
+        for (Usuario u : usuarios) {
+            modelo.addRow(new Object[]{u.getId(), u.getNome(), u.getEmail()});
         }
     }
     

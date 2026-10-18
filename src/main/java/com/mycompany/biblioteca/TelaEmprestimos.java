@@ -4,16 +4,13 @@
  */
 package com.mycompany.biblioteca;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import java.util.List;
-import java.util.ArrayList;
 import javax.swing.JPopupMenu;
 import javax.swing.JMenuItem;
+import java.time.LocalDate;
 
 /**
  *
@@ -25,6 +22,15 @@ import javax.swing.JMenuItem;
  * @author Usuario
  */
 public class TelaEmprestimos extends javax.swing.JFrame {
+    
+    private final EmprestimoDAO emprestimoDAO = new EmprestimoDAOJdbc();
+    private final UsuarioDAO usuarioDAO = new UsuarioDAOJdbc();
+    private final LivroDAO livroDAO = new LivroDAOJdbc();
+
+    /** Fonte de sugestões do autocompletar (implementada pelos DAOs). */
+    private interface FonteSugestoes {
+        List<String> buscar(String termo) throws SQLException;
+    }
 
     /**
      * Creates new form TelaEmprestimos
@@ -35,8 +41,8 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         carregarEmprestimos();
         
-        ativarAutocompletar(campoUsuarioId, "usuarios", "nome");
-        ativarAutocompletar(campoLivroId, "livros", "titulo");
+        ativarAutocompletar(campoUsuarioId, usuarioDAO::sugerirNomes);
+        ativarAutocompletar(campoLivroId, livroDAO::sugerirTitulos);
     }
 
     /**
@@ -184,88 +190,52 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         String tituloLivro = campoLivroId.getText().trim();
 
         if (nomeUsuario.isEmpty() || tituloLivro.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Informe o Nome do Usuário e o Titulo do Livro.");
+            JOptionPane.showMessageDialog(this, "Informe o nome do usuário e o título do livro.");
             return;
         }
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
+        try {
+            Usuario usuario = usuarioDAO.buscarPorNome(nomeUsuario);
+            Livro livro = livroDAO.buscarPorTitulo(tituloLivro);
 
-        String sql = "INSERT INTO emprestimos "
-            + "(usuario_id, livro_id, data_emprestimo, status) "
-            + "SELECT "
-            + "(SELECT id FROM usuarios WHERE nome ILIKE ? LIMIT 1), "
-            + "(SELECT id FROM livros WHERE titulo ILIKE ? LIMIT 1), "
-            + "CURRENT_DATE, 'EM ANDAMENTO' "
-            + "WHERE EXISTS (SELECT 1 FROM usuarios WHERE nome ILIKE ?) "
-            + "AND EXISTS (SELECT 1 FROM livros WHERE titulo ILIKE ?)"; 
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            String buscaUsuario = "%" + nomeUsuario + "%";
-            String buscaLivro = "%" + tituloLivro + "%";
-            
-            stmt.setString(1, nomeUsuario);
-            stmt.setString(2, tituloLivro);
-            stmt.setString(3, nomeUsuario);
-            stmt.setString(4, tituloLivro);
-            
-            int registrosInseridos = stmt.executeUpdate();
-            
-            if (registrosInseridos == 0) {
+            if (usuario == null || livro == null) {
                 JOptionPane.showMessageDialog(this, "Usuário ou livro não encontrado.");
                 return;
             }
-            
+
+            emprestimoDAO.inserir(new Emprestimo(usuario.getId(), livro.getId()));
             JOptionPane.showMessageDialog(this, "Empréstimo registrado com sucesso!");
-            
             campoUsuarioId.setText("");
             campoLivroId.setText("");
-            carregarEmprestimos();  
-            
+            carregarEmprestimos();
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Erro ao registrar empréstimo: " + e.getMessage());
         }
     }//GEN-LAST:event_btnRegistrarActionPerformed
     
     /**
-    * Busca até 8 nomes/títulos que contenham o texto digitado.
-    * Usado para exibir sugestões enquanto o usuário digita.
-    */
-    private List<String> buscarSugestoes(String tabela, String coluna, String termo) {
-        List<String> sugestoes = new ArrayList<>();
-        if (termo.isEmpty()) return sugestoes;
-
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return sugestoes;
-
-        String sql = "SELECT " + coluna + " FROM " + tabela + " WHERE " + coluna
-                + " ILIKE ? ORDER BY " + coluna + " LIMIT 8";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "%" + termo + "%");
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                sugestoes.add(rs.getString(coluna));
-            }
-        } catch (SQLException e) {
-            System.out.println("Erro ao buscar sugestões: " + e.getMessage());
-        }
-        return sugestoes;
-    }
-
-    /**
     * Liga um campo de texto a um menu suspenso de sugestões, consultando
     * a tabela/coluna informadas a cada caractere digitado.
     */
-    private void ativarAutocompletar(javax.swing.JTextField campo, String tabela, String coluna) {
+    private void ativarAutocompletar(javax.swing.JTextField campo, FonteSugestoes fonte) {
         JPopupMenu popup = new JPopupMenu();
 
         campo.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             private void atualizarSugestoes() {
                 String texto = campo.getText().trim();
                 popup.removeAll();
+                if (texto.isEmpty()) {
+                    popup.setVisible(false);
+                    return;
+                }
 
-                List<String> sugestoes = buscarSugestoes(tabela, coluna, texto);
+                List<String> sugestoes;
+                try {
+                    sugestoes = fonte.buscar(texto);
+                } catch (SQLException e) {
+                    System.out.println("Erro ao buscar sugestões: " + e.getMessage());
+                    return;
+                }
                 if (sugestoes.isEmpty()) {
                     popup.setVisible(false);
                     return;
@@ -274,8 +244,8 @@ public class TelaEmprestimos extends javax.swing.JFrame {
                 for (String sugestao : sugestoes) {
                     JMenuItem item = new JMenuItem(sugestao);
                     item.addActionListener(e -> {
-                        campo.setText(sugestao);
-                        popup.setVisible(false);
+                    campo.setText(sugestao);
+                    popup.setVisible(false);
                     });
                     popup.add(item);
                 }
@@ -314,14 +284,15 @@ public class TelaEmprestimos extends javax.swing.JFrame {
             return;
         }
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "UPDATE emprestimos SET data_devolucao = CURRENT_DATE, status = 'DEVOLVIDO' WHERE id = ?";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
+        try {
+            Emprestimo emprestimo = emprestimoDAO.buscarPorId(id);
+            if (emprestimo == null) {
+                JOptionPane.showMessageDialog(this, "Empréstimo não encontrado.");
+                return;
+            }
+            emprestimo.setDataDevolucao(LocalDate.now());
+            emprestimo.setStatus("DEVOLVIDO");
+            emprestimoDAO.atualizar(emprestimo);
             JOptionPane.showMessageDialog(this, "Devolução registrada com sucesso!");
             carregarEmprestimos();
         } catch (SQLException e) {
@@ -353,27 +324,15 @@ public class TelaEmprestimos extends javax.swing.JFrame {
         DefaultTableModel modelo = (DefaultTableModel) tabelaEmprestimos.getModel();
         modelo.setRowCount(0);
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "SELECT e.id, u.nome AS usuario, l.titulo AS livro, "
-                + "e.data_emprestimo, e.data_devolucao, e.status "
-                + "FROM emprestimos e "
-                + "JOIN usuarios u ON u.id = e.usuario_id "
-                + "JOIN livros l ON l.id = e.livro_id "
-                + "ORDER BY e.id";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
+        try {
+            for (Emprestimo e : emprestimoDAO.listarTodos()) {
                 modelo.addRow(new Object[]{
-                    rs.getInt("id"),
-                    rs.getString("usuario"),
-                    rs.getString("livro"),
-                    rs.getDate("data_emprestimo"),
-                    rs.getDate("data_devolucao"),
-                    rs.getString("status")
+                    e.getId(),
+                    e.getUsuarioNome(),
+                    e.getLivroTitulo(),
+                    e.getDataEmprestimo(),
+                    e.getDataDevolucao(),
+                    e.getStatus()
                 });
             }
         } catch (SQLException e) {

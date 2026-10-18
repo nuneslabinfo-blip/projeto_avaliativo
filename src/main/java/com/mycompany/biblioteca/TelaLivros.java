@@ -4,9 +4,7 @@
  */
 package com.mycompany.biblioteca;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.List;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
@@ -16,6 +14,7 @@ import javax.swing.table.DefaultTableModel;
  * @author Usuario
  */
 public class TelaLivros extends javax.swing.JFrame {
+    private final LivroDAO livroDAO = new LivroDAOJdbc();
 
     /**
      * Creates new form TelaLivros
@@ -172,32 +171,8 @@ public class TelaLivros extends javax.swing.JFrame {
 
     private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuscarActionPerformed
         String termo = campoBuscar.getText().trim();
-        if (termo.isEmpty()) {
-            carregarLivros();
-            return;
-        }
-
-        DefaultTableModel modelo = (DefaultTableModel) tabelaLivrosResultado.getModel();
-        modelo.setRowCount(0);
-
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "SELECT * FROM livros WHERE titulo ILIKE ? OR autor ILIKE ? ORDER BY id";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "%" + termo + "%");
-            stmt.setString(2, "%" + termo + "%");
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    modelo.addRow(new Object[]{
-                        rs.getInt("id"),
-                        rs.getString("titulo"),
-                        rs.getString("autor")
-                    });
-                }
-            }
+        try {
+            preencherTabela(termo.isEmpty() ? livroDAO.listarTodos() : livroDAO.buscar(termo));
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Erro ao buscar: " + e.getMessage());
         }
@@ -220,15 +195,8 @@ public class TelaLivros extends javax.swing.JFrame {
         String autor = JOptionPane.showInputDialog(this, "Autor do livro:");
         if (autor == null || autor.isBlank()) return;
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "INSERT INTO livros (titulo, autor) VALUES (?, ?)";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, titulo);
-            stmt.setString(2, autor);
-            stmt.executeUpdate();
+        try {
+            livroDAO.inserir(new Livro(titulo, autor));
             JOptionPane.showMessageDialog(this, "Livro cadastrado com sucesso!");
             carregarLivros();
         } catch (SQLException e) {
@@ -252,26 +220,18 @@ public class TelaLivros extends javax.swing.JFrame {
         int id = (int) tabelaLivrosResultado.getValueAt(linha, 0);
         String tituloAtual = (String) tabelaLivrosResultado.getValueAt(linha, 1);
         String autorAtual = (String) tabelaLivrosResultado.getValueAt(linha, 2);
-        
-        String novoTitulo = JOptionPane.showInputDialog(this,"Título (deixe em branco para manter):", tituloAtual);
+
+        String novoTitulo = JOptionPane.showInputDialog(this, "Título (deixe em branco para manter):", tituloAtual);
         if (novoTitulo == null) return;
-        
-        String novoAutor = JOptionPane.showInputDialog(this,"Autor (deixe em branco para manter):", autorAtual);
+
+        String novoAutor = JOptionPane.showInputDialog(this, "Autor (deixe em branco para manter):", autorAtual);
         if (novoAutor == null) return;
-        
+
         if (novoTitulo.isBlank()) novoTitulo = tituloAtual;
         if (novoAutor.isBlank()) novoAutor = autorAtual;
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "UPDATE livros SET titulo = ?, autor = ? WHERE id = ?";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, novoTitulo);
-            stmt.setString(2, novoAutor);
-            stmt.setInt(3, id);
-            stmt.executeUpdate();
+        try {
+            livroDAO.atualizar(new Livro(id, novoTitulo, novoAutor));
             JOptionPane.showMessageDialog(this, "Livro atualizado com sucesso!");
             carregarLivros();
         } catch (SQLException e) {
@@ -292,17 +252,10 @@ public class TelaLivros extends javax.swing.JFrame {
         int id = (int) tabelaLivrosResultado.getValueAt(linha, 0);
         int confirmar = JOptionPane.showConfirmDialog(this, "Confirma a remoção do livro ID " + id + "?",
                 "Confirmação", JOptionPane.YES_NO_OPTION);
-
         if (confirmar != JOptionPane.YES_OPTION) return;
 
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) return;
-
-        String sql = "DELETE FROM livros WHERE id = ?";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
+        try {
+            livroDAO.excluir(id);
             JOptionPane.showMessageDialog(this, "Livro removido com sucesso!");
             carregarLivros();
         } catch (SQLException e) {
@@ -323,29 +276,19 @@ public class TelaLivros extends javax.swing.JFrame {
     * registros quando chamado depois de um cadastro/atualização/remoção.
     */
     private void carregarLivros() {
-        DefaultTableModel modelo = (DefaultTableModel) tabelaLivrosResultado.getModel();
-        modelo.setRowCount(0); // Limpa a tabela
-
-        Connection conn = Biblioteca.conectar();
-        if (conn == null) {
-            return;
-        }
-
-        String sql = "SELECT * FROM livros ORDER BY id";
-
-        try (conn; PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                modelo.addRow(new Object[]{
-                    rs.getInt("id"),
-                    rs.getString("titulo"),
-                    rs.getString("autor")
-                });
-            }
-
+        try {
+            preencherTabela(livroDAO.listarTodos());
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Erro ao listar livros: " + e.getMessage());
+        }
+    }
+    
+    /** Limpa a tabela e a preenche com a lista recebida. */
+    private void preencherTabela(List<Livro> livros) {
+        DefaultTableModel modelo = (DefaultTableModel) tabelaLivrosResultado.getModel();
+        modelo.setRowCount(0);
+        for (Livro l : livros) {
+            modelo.addRow(new Object[]{l.getId(), l.getTitulo(), l.getAutor()});
         }
     }
     

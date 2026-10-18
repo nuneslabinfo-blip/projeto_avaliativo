@@ -9,18 +9,9 @@ import java.sql.SQLException;
 
 /**
  * Classe principal do sistema.
- * Guarda os dadosve inicia a interface grafica (GUI).
+ * Guarda os dados de conexão com o banco e inicia a interface gráfica (GUI).
  *
  * @author Usuario
- */
-
-/**
- * Abre uma nova conexão com o banco de dados PostgreSQL da biblioteca.
- * Usado por todas as telas (Livros, Usuários, Empréstimos) antes de
- * qualquer operação SQL.
- *
- * @return a conexão aberta, ou {@code null} se não foi possível conectar
- *         (nesse caso, quem chamou deve verificar o retorno antes de usar)
  */
 public class Biblioteca {
 
@@ -34,6 +25,12 @@ public class Biblioteca {
     // =============================================
     // CONEXAO COM O BANCO
     // =============================================
+
+    /**
+     * Abre uma nova conexão com o banco de dados PostgreSQL da biblioteca.
+     *
+     * @return a conexão aberta, ou {@code null} se não foi possível conectar
+     */
     public static Connection conectar() {
         try {
             Connection conn = DriverManager.getConnection(URL, USUARIO, SENHA);
@@ -45,6 +42,18 @@ public class Biblioteca {
             System.out.println("Mensagem: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Abre uma conexão ou lança exceção; usado pelos DAOs.
+     *
+     * @return conexão aberta (nunca {@code null})
+     * @throws SQLException se não for possível conectar
+     */
+    public static Connection abrirConexao() throws SQLException {
+        Connection conn = conectar();
+        if (conn == null) throw new SQLException("Não foi possível conectar ao banco.");
+        return conn;
     }
 
     // =============================================
